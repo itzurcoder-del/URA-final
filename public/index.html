@@ -1,254 +1,214 @@
-<!doctype html>
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <title>URA Chatbot</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Chatbot</title>
   <style>
+    * { box-sizing: border-box; }
     body {
-      font-family: system-ui, Arial;
+      font-family: Arial, sans-serif;
+      background: #0f0f0f;
+      color: #fff;
       margin: 0;
-      background: var(--bg);
-      color: var(--text);
       display: flex;
       flex-direction: column;
-      align-items: center;
       height: 100vh;
       transition: background 0.3s, color 0.3s;
-      --bg: #f5f5f5;
-      --text: #000;
-      --user: #06b6d4;
-      --ura: #22c55e;
     }
-    body.dark {
-      --bg: #121212;
-      --text: #fff;
-      --user: #0ea5e9;
-      --ura: #16a34a;
-    }
-    h1 {
-      margin: 20px 0;
-    }
-    .controls {
-      position: absolute;
-      top: 16px;
-      right: 20px;
+    body.light { background: #f2f2f2; color: #222; }
+    header {
       display: flex;
+      justify-content: space-between;
       align-items: center;
+      padding: 10px 15px;
+      border-bottom: 1px solid #444;
+    }
+    header.light { border-bottom: 1px solid #ccc; }
+    .container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 20px;
+      overflow-y: auto;
       gap: 10px;
     }
-    #themeToggle {
-      cursor: pointer;
-      font-size: 20px;
-    }
-    .chat {
-      flex: 1;
-      width: 85%;
-      max-width: 800px;
-      border: 1px solid #ccc;
-      border-radius: 12px;
-      padding: 16px;
-      overflow-y: auto;
-      background: var(--bg);
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-      margin-bottom: 10px;
-    }
-    .msg {
-      margin: 10px 0;
+    .message {
+      max-width: 80%;
       padding: 10px 14px;
-      border-radius: 16px;
-      display: inline-block;
-      max-width: 75%;
+      border-radius: 12px;
+      margin-bottom: 10px;
       word-wrap: break-word;
     }
     .user {
-      background: var(--user);
-      color: #000;
+      background: #0078ff;
+      color: white;
       align-self: flex-end;
-      border-bottom-right-radius: 4px;
-      float: right;
-      clear: both;
     }
-    .ura {
-      background: var(--ura);
-      color: #fff;
+    .bot {
+      background: #2e2e2e;
+      color: white;
       align-self: flex-start;
-      border-bottom-left-radius: 4px;
-      float: left;
-      clear: both;
     }
-    .bottom {
-      width: 85%;
-      max-width: 800px;
+    body.light .bot { background: #ddd; color: #000; }
+    .input-area {
       display: flex;
-      align-items: center;
-      margin-bottom: 16px;
       gap: 10px;
+      padding: 10px;
+      border-top: 1px solid #444;
     }
-    textarea {
+    body.light .input-area { border-top: 1px solid #ccc; }
+    input {
       flex: 1;
-      padding: 12px 20px;
-      border-radius: 50px;
-      border: 1px solid #ccc;
-      resize: none;
-      outline: none;
-      height: 50px;
-    }
-    button {
-      background: var(--user);
-      color: #000;
-      border: none;
-      border-radius: 30px;
-      padding: 10px 18px;
-      cursor: pointer;
-      font-weight: bold;
-    }
-    button:hover {
-      opacity: 0.8;
-    }
-    .read-btn, .stop-btn {
-      margin-left: 10px;
-      background: #333;
-      color: #fff;
+      padding: 10px;
+      border: 1px solid #666;
       border-radius: 8px;
-      padding: 4px 8px;
-      cursor: pointer;
-      font-size: 12px;
+      background: transparent;
+      color: inherit;
     }
+    button, select {
+      padding: 10px 14px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      background: #0078ff;
+      color: white;
+    }
+    button:hover { opacity: 0.9; }
   </style>
 </head>
 <body>
-  <h1>URA Chatbot</h1>
-  <div class="controls">
-    <select id="voiceSelect"></select>
-    <span id="themeToggle">🌙</span>
-  </div>
-  <div class="chat" id="chat"></div>
-  <div class="bottom">
-    <button id="micBtn">🎤</button>
-    <textarea id="input" placeholder="Type your message..."></textarea>
+  <header>
+    <h3>AI Chatbot</h3>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <select id="voiceSelect"></select>
+      <button id="toggleTheme">🌙</button>
+    </div>
+  </header>
+
+  <div class="container" id="chatContainer"></div>
+
+  <div class="input-area">
+    <input type="text" id="userInput" placeholder="Type a message..." />
     <button id="sendBtn">Send</button>
   </div>
 
   <script>
-    const chat = document.getElementById("chat");
-    const input = document.getElementById("input");
+    const chatContainer = document.getElementById("chatContainer");
+    const userInput = document.getElementById("userInput");
     const sendBtn = document.getElementById("sendBtn");
-    const micBtn = document.getElementById("micBtn");
-    const themeToggle = document.getElementById("themeToggle");
+    const toggleThemeBtn = document.getElementById("toggleTheme");
     const voiceSelect = document.getElementById("voiceSelect");
+    let dark = true;
 
-    let voices = [];
-    let listening = false;
-    let synth = window.speechSynthesis;
-    let recognition;
-    let uraName = "URA";
-
-    function boldify(text) {
-      return text.replace(/\*\*(.*?)\*\*/g, "<b>$1</b>");
+    // Load theme from memory
+    if(localStorage.getItem("theme") === "light") {
+      document.body.classList.add("light");
+      toggleThemeBtn.textContent = "☀️";
+      dark = false;
     }
 
-    function populateVoices() {
-      voices = synth.getVoices();
-      voiceSelect.innerHTML = voices
-        .map((v, i) => `<option value="${i}">${v.name}</option>`)
-        .join("");
-    }
+    // Load name memory
+    let userName = localStorage.getItem("userName") || "";
 
-    synth.onvoiceschanged = populateVoices;
-    populateVoices();
-
-    function speak(text) {
-      const utterance = new SpeechSynthesisUtterance(text);
-      const selected = voices[voiceSelect.value];
-      if (selected) utterance.voice = selected;
-      synth.speak(utterance);
-    }
-
-    function stopSpeak() {
-      synth.cancel();
-    }
-
-    function append(role, text) {
-      const div = document.createElement("div");
-      div.className = "msg " + role;
-      div.innerHTML = boldify(text);
-
-      if (role === "ura") {
-        const readBtn = document.createElement("button");
-        readBtn.className = "read-btn";
-        readBtn.textContent = "🔊";
-        readBtn.onclick = () => speak(text);
-
-        const stopBtn = document.createElement("button");
-        stopBtn.className = "stop-btn";
-        stopBtn.textContent = "⏹";
-        stopBtn.onclick = stopSpeak;
-
-        div.appendChild(readBtn);
-        div.appendChild(stopBtn);
-      }
-
-      chat.appendChild(div);
-      chat.scrollTop = chat.scrollHeight;
-    }
-
-    async function sendMessage(text) {
-      if (!text) return;
-      append("user", text);
-      append("ura", "...thinking...");
-      input.value = "";
-
-      try {
-        // Simulated response for Vercel demo (replace with /api/chat)
-        await new Promise(r => setTimeout(r, 800));
-        let reply = `${uraName}: You said **${text}**. How can I help you more?`;
-
-        document.querySelector(".ura:last-child").remove();
-        append("ura", reply);
-
-        if (listening) speak(reply);
-      } catch (e) {
-        document.querySelector(".ura:last-child").innerText = "Error contacting server.";
-      }
-    }
-
-    sendBtn.addEventListener("click", () => sendMessage(input.value.trim()));
-    input.addEventListener("keydown", e => {
-      if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        sendMessage(input.value.trim());
-      }
+    toggleThemeBtn.addEventListener("click", () => {
+      document.body.classList.toggle("light");
+      dark = !dark;
+      localStorage.setItem("theme", dark ? "dark" : "light");
+      toggleThemeBtn.textContent = dark ? "🌙" : "☀️";
     });
 
-    // Dark/Light toggle
-    themeToggle.onclick = () => {
-      document.body.classList.toggle("dark");
-      themeToggle.textContent = document.body.classList.contains("dark") ? "☀️" : "🌙";
-    };
+    // Voice setup
+    let voices = [];
+    function loadVoices() {
+      voices = speechSynthesis.getVoices();
+      voiceSelect.innerHTML = "";
+      voices.forEach((v, i) => {
+        const opt = document.createElement("option");
+        opt.value = i;
+        opt.textContent = v.name;
+        voiceSelect.appendChild(opt);
+      });
+    }
+    loadVoices();
+    speechSynthesis.onvoiceschanged = loadVoices;
 
-    // Mic button (voice input)
-    micBtn.onclick = () => {
-      if (!('webkitSpeechRecognition' in window)) {
-        alert("Voice recognition not supported here.");
-        return;
+    function speak(text) {
+      const utter = new SpeechSynthesisUtterance(text);
+      const selected = voiceSelect.value;
+      if(voices[selected]) utter.voice = voices[selected];
+      speechSynthesis.speak(utter);
+    }
+
+    function addMessage(text, sender) {
+      const msg = document.createElement("div");
+      msg.className = "message " + sender;
+      msg.textContent = text;
+      chatContainer.appendChild(msg);
+      chatContainer.scrollTo({ top: chatContainer.scrollHeight, behavior: "smooth" });
+    }
+
+    async function handleMessage() {
+      const text = userInput.value.trim();
+      if (!text) return;
+      addMessage(text, "user");
+      userInput.value = "";
+
+      addMessage("..thinking..", "bot");
+      chatContainer.scrollTo({ top: chatContainer.scrollHeight, behavior: "smooth" });
+
+      // store conversation locally
+      const oldChats = JSON.parse(localStorage.getItem("chats") || "[]");
+      oldChats.push({ sender: "user", text });
+      localStorage.setItem("chats", JSON.stringify(oldChats));
+
+      try {
+        let reply = "";
+        if(!userName && text.toLowerCase().includes("my name is")) {
+          userName = text.split("is")[1]?.trim() || "";
+          localStorage.setItem("userName", userName);
+          reply = `Nice to meet you, ${userName}!`;
+        } else if(userName && text.toLowerCase().includes("my name")) {
+          reply = `You already told me your name is ${userName}.`;
+        } else {
+          // Simulate AI response
+          reply = await getAIResponse(text, userName);
+        }
+
+        const thinking = document.querySelector(".bot:last-child");
+        thinking.textContent = reply;
+        speak(reply);
+
+        oldChats.push({ sender: "bot", text: reply });
+        localStorage.setItem("chats", JSON.stringify(oldChats));
+
+      } catch (err) {
+        console.error(err);
+        const thinking = document.querySelector(".bot:last-child");
+        thinking.textContent = "Something went wrong.";
       }
-      if (!recognition) {
-        recognition = new webkitSpeechRecognition();
-        recognition.lang = "en-GB";
-        recognition.interimResults = false;
-        recognition.maxAlternatives = 1;
+    }
 
-        recognition.onresult = e => {
-          const text = e.results[0][0].transcript;
-          listening = true;
-          sendMessage(text);
-        };
-        recognition.onend = () => (listening = false);
-      }
+    // Fake AI function (you can connect to your real endpoint here)
+    async function getAIResponse(userText, name) {
+      const prompt = name ? `${name}, ${userText}` : userText;
+      // You can replace this with your real API
+      const responses = [
+        "Interesting, tell me more.",
+        "I understand what you mean.",
+        "That's cool!",
+        "Can you explain that a bit more?",
+        "Good question!"
+      ];
+      return responses[Math.floor(Math.random() * responses.length)];
+    }
 
-      recognition.start();
-    };
+    sendBtn.addEventListener("click", handleMessage);
+    userInput.addEventListener("keydown", e => { if(e.key === "Enter") handleMessage(); });
+
+    // Restore chat from memory
+    const savedChats = JSON.parse(localStorage.getItem("chats") || "[]");
+    savedChats.forEach(c => addMessage(c.text, c.sender));
   </script>
 </body>
 </html>

@@ -135,7 +135,9 @@
     let recognition;
     let isDark = false;
 
-    // Load voices
+    // 🧠 GROQ API KEY
+    const GROQ_API_KEY = "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"; // replace this!
+
     function loadVoices() {
       voices = speechSynthesis.getVoices();
       voiceSelect.innerHTML = voices.map(v => `<option value="${v.name}">${v.name}</option>`).join("");
@@ -176,33 +178,53 @@
       input.value = "";
       append("bot", "…thinking…");
 
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text })
-      });
+      try {
+        const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${GROQ_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "llama3-8b-8192",
+            messages: [
+              { role: "system", content: "You are URA, a friendly AI who remembers user's name as Fehman Mohammed." },
+              { role: "user", content: text }
+            ]
+          })
+        });
 
-      const data = await res.json();
-      const last = chat.querySelector(".msg.bot:last-child");
-      if (last && last.textContent.includes("thinking")) last.remove();
+        if (!res.ok) {
+          const errText = await res.text();
+          console.error("Groq API error:", errText);
+          throw new Error("Groq API failed");
+        }
 
-      let reply = data.reply || "No reply (check server).";
-      reply = reply.replace(/\b(bot|assistant)\b/gi, "URA");
+        const data = await res.json();
+        const reply = data.choices?.[0]?.message?.content || "No response from Groq.";
 
-      append("bot", reply);
+        const last = chat.querySelector(".msg.bot:last-child");
+        if (last && last.textContent.includes("thinking")) last.remove();
 
-      const btnWrap = document.createElement("div");
-      const readBtn = document.createElement("button");
-      const stopBtn = document.createElement("button");
-      readBtn.textContent = "🔊 Read Aloud";
-      stopBtn.textContent = "⏹ Stop";
-      readBtn.onclick = () => speak(reply);
-      stopBtn.onclick = () => speechSynthesis.cancel();
-      btnWrap.append(readBtn, stopBtn);
-      chat.appendChild(btnWrap);
-      chat.scrollTop = chat.scrollHeight;
+        append("bot", reply);
+        if (voiceSpeak) speak(reply);
 
-      if (voiceSpeak) speak(reply);
+        const btnWrap = document.createElement("div");
+        const readBtn = document.createElement("button");
+        const stopBtn = document.createElement("button");
+        readBtn.textContent = "🔊 Read Aloud";
+        stopBtn.textContent = "⏹ Stop";
+        readBtn.onclick = () => speak(reply);
+        stopBtn.onclick = () => speechSynthesis.cancel();
+        btnWrap.append(readBtn, stopBtn);
+        chat.appendChild(btnWrap);
+        chat.scrollTop = chat.scrollHeight;
+
+      } catch (err) {
+        console.error(err);
+        const last = chat.querySelector(".msg.bot:last-child");
+        if (last) last.textContent = "Error: Unable to connect to Groq API.";
+      }
     }
 
     send.addEventListener("click", () => {

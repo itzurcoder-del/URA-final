@@ -1,0 +1,236 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>URA Chatbot</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    :root {
+      --bg: #f5f5f5;
+      --text: #111;
+      --user: #0ea5e9;
+      --bot: #22c55e;
+      --bubble: #fff;
+    }
+    body.dark {
+      --bg: #0d1117;
+      --text: #e6edf3;
+      --user: #60a5fa;
+      --bot: #4ade80;
+      --bubble: #161b22;
+    }
+    body {
+      font-family: system-ui, Arial;
+      margin: 0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg);
+      color: var(--text);
+      transition: background 0.3s, color 0.3s;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 18px;
+      background: var(--bubble);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+    }
+    #chat {
+      flex: 1;
+      padding: 16px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .msg {
+      max-width: 70%;
+      padding: 10px 14px;
+      border-radius: 18px;
+      background: var(--bubble);
+      line-height: 1.4;
+      word-wrap: break-word;
+      animation: fadeIn 0.3s ease;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .user {
+      align-self: flex-end;
+      background: var(--user);
+      color: #fff;
+    }
+    .bot {
+      align-self: flex-start;
+      background: var(--bot);
+      color: #fff;
+    }
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px;
+      background: var(--bubble);
+      box-shadow: 0 -1px 4px rgba(0,0,0,0.1);
+    }
+    textarea {
+      flex: 1;
+      border: none;
+      border-radius: 50px;
+      padding: 10px 16px;
+      resize: none;
+      height: 45px;
+      font-size: 15px;
+      outline: none;
+    }
+    button {
+      background: var(--user);
+      color: #fff;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 25px;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    button:hover { opacity: 0.85; }
+    select, #themeToggle {
+      padding: 6px 10px;
+      border-radius: 8px;
+      border: none;
+      background: var(--bubble);
+      color: var(--text);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h2>URA Chatbot</h2>
+    <div>
+      <select id="voiceSelect"></select>
+      <button id="themeToggle">🌙</button>
+    </div>
+  </header>
+
+  <div id="chat"></div>
+
+  <div class="controls">
+    <button id="mic">🎤</button>
+    <textarea id="input" placeholder="Type your message..."></textarea>
+    <button id="send">Send</button>
+  </div>
+
+  <script>
+    const chat = document.getElementById("chat");
+    const input = document.getElementById("input");
+    const send = document.getElementById("send");
+    const mic = document.getElementById("mic");
+    const voiceSelect = document.getElementById("voiceSelect");
+    const themeToggle = document.getElementById("themeToggle");
+
+    let voices = [];
+    let currentVoice = null;
+    let recognition;
+    let isDark = false;
+
+    // Load voices
+    function loadVoices() {
+      voices = speechSynthesis.getVoices();
+      voiceSelect.innerHTML = voices
+        .map(v => `<option value="${v.name}">${v.name}</option>`)
+        .join("");
+      const ukVoice = voices.find(v => v.name.includes("Google UK"));
+      if (ukVoice) {
+        currentVoice = ukVoice;
+        voiceSelect.value = ukVoice.name;
+      }
+    }
+    speechSynthesis.onvoiceschanged = loadVoices;
+
+    voiceSelect.addEventListener("change", () => {
+      currentVoice = voices.find(v => v.name === voiceSelect.value);
+    });
+
+    themeToggle.addEventListener("click", () => {
+      document.body.classList.toggle("dark");
+      isDark = !isDark;
+      themeToggle.textContent = isDark ? "☀️" : "🌙";
+    });
+
+    function append(role, text) {
+      const d = document.createElement("div");
+      d.className = "msg " + (role === "user" ? "user" : "bot");
+      d.innerHTML = text.replace(/\*\*(.*?)\*\*/g, "<b>$1</b>");
+      chat.appendChild(d);
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    function speak(text) {
+      const utter = new SpeechSynthesisUtterance(text);
+      utter.voice = currentVoice || voices[0];
+      speechSynthesis.speak(utter);
+    }
+
+    async function handleMessage(text, voiceSpeak = false) {
+      append("user", text);
+      input.value = "";
+      append("bot", "…thinking…");
+
+     const res = await fetch("/api/chat", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ message, userId: "fehman" })
+});
+
+      const data = await res.json();
+
+      const last = chat.querySelector(".msg.bot:last-child");
+      if (last && last.textContent.includes("thinking")) last.remove();
+
+      // Ensure URA always refers to himself correctly
+      let reply = data.reply || "No reply (check server).";
+      reply = reply.replace(/\b(ura|URA|bot|assistant)\b/g, "URA");
+
+      append("bot", reply);
+
+      const btnWrap = document.createElement("div");
+      const readBtn = document.createElement("button");
+      const stopBtn = document.createElement("button");
+      readBtn.textContent = "🔊 Read Aloud";
+      stopBtn.textContent = "⏹ Stop";
+      readBtn.onclick = () => speak(reply);
+      stopBtn.onclick = () => speechSynthesis.cancel();
+      btnWrap.append(readBtn, stopBtn);
+      chat.appendChild(btnWrap);
+      chat.scrollTop = chat.scrollHeight;
+
+      if (voiceSpeak) speak(reply);
+    }
+
+    send.addEventListener("click", () => {
+      const text = input.value.trim();
+      if (text) handleMessage(text, false);
+    });
+
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) send.click();
+    });
+
+    mic.addEventListener("click", () => {
+      if (!('webkitSpeechRecognition' in window)) {
+        alert("Speech recognition not supported");
+        return;
+      }
+      recognition = new webkitSpeechRecognition();
+      recognition.lang = "en-GB";
+      recognition.start();
+      recognition.onresult = (e) => {
+        const text = e.results[0][0].transcript;
+        handleMessage(text, true);
+      };
+    });
+  </script>
+</body>
+</html>

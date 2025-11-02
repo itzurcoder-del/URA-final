@@ -3,241 +3,252 @@
 <head>
   <meta charset="utf-8" />
   <title>URA Chatbot</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    :root {
-      --bg: #f5f5f5;
-      --text: #111;
-      --user: #0ea5e9;
-      --bot: #22c55e;
-      --bubble: #fff;
-    }
-    body.dark {
-      --bg: #0d1117;
-      --text: #e6edf3;
-      --user: #60a5fa;
-      --bot: #4ade80;
-      --bubble: #161b22;
-    }
     body {
       font-family: system-ui, Arial;
       margin: 0;
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
       background: var(--bg);
       color: var(--text);
-      transition: background 0.3s, color 0.3s;
-    }
-    header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 12px 18px;
-      background: var(--bubble);
-      box-shadow: 0 1px 4px rgba(0,0,0,0.2);
-    }
-    #chat {
-      flex: 1;
-      padding: 16px;
-      overflow-y: auto;
       display: flex;
       flex-direction: column;
-      gap: 10px;
-      max-width: 85%;
-      margin: auto;
+      align-items: center;
+      height: 100vh;
+      transition: background 0.3s, color 0.3s;
+      --bg: #f5f5f5;
+      --text: #000;
+      --user: #06b6d4;
+      --ura: #22c55e;
     }
-    .msg {
-      max-width: 70%;
-      padding: 10px 14px;
-      border-radius: 18px;
-      background: var(--bubble);
-      line-height: 1.4;
-      word-wrap: break-word;
-      animation: fadeIn 0.3s ease;
+    body.dark {
+      --bg: #121212;
+      --text: #fff;
+      --user: #0ea5e9;
+      --ura: #16a34a;
     }
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    .user {
-      align-self: flex-end;
-      background: var(--user);
-      color: #fff;
-    }
-    .bot {
-      align-self: flex-start;
-      background: var(--bot);
-      color: #fff;
+    h1 {
+      margin: 20px 0;
     }
     .controls {
+      position: absolute;
+      top: 16px;
+      right: 20px;
       display: flex;
       align-items: center;
       gap: 10px;
-      padding: 10px;
-      background: var(--bubble);
-      box-shadow: 0 -1px 4px rgba(0,0,0,0.1);
+    }
+    #themeToggle {
+      cursor: pointer;
+      font-size: 20px;
+    }
+    .chat {
+      flex: 1;
+      width: 85%;
+      max-width: 800px;
+      border: 1px solid #ccc;
+      border-radius: 12px;
+      padding: 16px;
+      overflow-y: auto;
+      background: var(--bg);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      margin-bottom: 10px;
+    }
+    .msg {
+      margin: 10px 0;
+      padding: 10px 14px;
+      border-radius: 16px;
+      display: inline-block;
+      max-width: 75%;
+      word-wrap: break-word;
+    }
+    .user {
+      background: var(--user);
+      color: #000;
+      align-self: flex-end;
+      border-bottom-right-radius: 4px;
+      float: right;
+      clear: both;
+    }
+    .ura {
+      background: var(--ura);
+      color: #fff;
+      align-self: flex-start;
+      border-bottom-left-radius: 4px;
+      float: left;
+      clear: both;
+    }
+    .bottom {
+      width: 85%;
+      max-width: 800px;
+      display: flex;
+      align-items: center;
+      margin-bottom: 16px;
+      gap: 10px;
     }
     textarea {
       flex: 1;
-      border: none;
+      padding: 12px 20px;
       border-radius: 50px;
-      padding: 10px 16px;
+      border: 1px solid #ccc;
       resize: none;
-      height: 45px;
-      font-size: 15px;
       outline: none;
+      height: 50px;
     }
     button {
       background: var(--user);
-      color: #fff;
+      color: #000;
       border: none;
-      padding: 10px 16px;
-      border-radius: 25px;
+      border-radius: 30px;
+      padding: 10px 18px;
       cursor: pointer;
-      transition: 0.2s;
+      font-weight: bold;
     }
-    button:hover { opacity: 0.85; }
-    select, #themeToggle {
-      padding: 6px 10px;
+    button:hover {
+      opacity: 0.8;
+    }
+    .read-btn, .stop-btn {
+      margin-left: 10px;
+      background: #333;
+      color: #fff;
       border-radius: 8px;
-      border: none;
-      background: var(--bubble);
-      color: var(--text);
+      padding: 4px 8px;
+      cursor: pointer;
+      font-size: 12px;
     }
   </style>
 </head>
 <body>
-  <header>
-    <h2>URA Chatbot</h2>
-    <div>
-      <select id="voiceSelect"></select>
-      <button id="themeToggle">🌙</button>
-    </div>
-  </header>
-
-  <div id="chat"></div>
-
+  <h1>URA Chatbot</h1>
   <div class="controls">
-    <button id="mic">🎤</button>
+    <select id="voiceSelect"></select>
+    <span id="themeToggle">🌙</span>
+  </div>
+  <div class="chat" id="chat"></div>
+  <div class="bottom">
+    <button id="micBtn">🎤</button>
     <textarea id="input" placeholder="Type your message..."></textarea>
-    <button id="send">Send</button>
+    <button id="sendBtn">Send</button>
   </div>
 
   <script>
     const chat = document.getElementById("chat");
     const input = document.getElementById("input");
-    const send = document.getElementById("send");
-    const mic = document.getElementById("mic");
-    const voiceSelect = document.getElementById("voiceSelect");
+    const sendBtn = document.getElementById("sendBtn");
+    const micBtn = document.getElementById("micBtn");
     const themeToggle = document.getElementById("themeToggle");
+    const voiceSelect = document.getElementById("voiceSelect");
 
     let voices = [];
-    let currentVoice = null;
+    let listening = false;
+    let synth = window.speechSynthesis;
     let recognition;
-    let isDark = false;
+    let uraName = "URA";
 
-    // Load voices
-    function loadVoices() {
-      voices = speechSynthesis.getVoices();
-      voiceSelect.innerHTML = voices
-        .map(v => `<option value="${v.name}">${v.name}</option>`)
-        .join("");
-      const ukVoice = voices.find(v => v.name.includes("Google UK"));
-      if (ukVoice) {
-        currentVoice = ukVoice;
-        voiceSelect.value = ukVoice.name;
-      }
+    function boldify(text) {
+      return text.replace(/\*\*(.*?)\*\*/g, "<b>$1</b>");
     }
-    speechSynthesis.onvoiceschanged = loadVoices;
 
-    voiceSelect.addEventListener("change", () => {
-      currentVoice = voices.find(v => v.name === voiceSelect.value);
-    });
+    function populateVoices() {
+      voices = synth.getVoices();
+      voiceSelect.innerHTML = voices
+        .map((v, i) => `<option value="${i}">${v.name}</option>`)
+        .join("");
+    }
 
-    themeToggle.addEventListener("click", () => {
-      document.body.classList.toggle("dark");
-      isDark = !isDark;
-      themeToggle.textContent = isDark ? "☀️" : "🌙";
-    });
+    synth.onvoiceschanged = populateVoices;
+    populateVoices();
+
+    function speak(text) {
+      const utterance = new SpeechSynthesisUtterance(text);
+      const selected = voices[voiceSelect.value];
+      if (selected) utterance.voice = selected;
+      synth.speak(utterance);
+    }
+
+    function stopSpeak() {
+      synth.cancel();
+    }
 
     function append(role, text) {
-      const d = document.createElement("div");
-      d.className = "msg " + (role === "user" ? "user" : "bot");
-      d.innerHTML = text.replace(/\*\*(.*?)\*\*/g, "<b>$1</b>");
-      chat.appendChild(d);
+      const div = document.createElement("div");
+      div.className = "msg " + role;
+      div.innerHTML = boldify(text);
+
+      if (role === "ura") {
+        const readBtn = document.createElement("button");
+        readBtn.className = "read-btn";
+        readBtn.textContent = "🔊";
+        readBtn.onclick = () => speak(text);
+
+        const stopBtn = document.createElement("button");
+        stopBtn.className = "stop-btn";
+        stopBtn.textContent = "⏹";
+        stopBtn.onclick = stopSpeak;
+
+        div.appendChild(readBtn);
+        div.appendChild(stopBtn);
+      }
+
+      chat.appendChild(div);
       chat.scrollTop = chat.scrollHeight;
     }
 
-    function speak(text) {
-      const utter = new SpeechSynthesisUtterance(text);
-      utter.voice = currentVoice || voices[0];
-      speechSynthesis.cancel();
-      speechSynthesis.speak(utter);
-    }
-
-    async function handleMessage(text, voiceSpeak = false) {
+    async function sendMessage(text) {
+      if (!text) return;
       append("user", text);
+      append("ura", "...thinking...");
       input.value = "";
-      append("bot", "…thinking…");
 
       try {
-        const res = await fetch("/api/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: text, userId: "fehman" })
-        });
+        // Simulated response for Vercel demo (replace with /api/chat)
+        await new Promise(r => setTimeout(r, 800));
+        let reply = `${uraName}: You said **${text}**. How can I help you more?`;
 
-        const data = await res.json();
-        const last = chat.querySelector(".msg.bot:last-child");
-        if (last && last.textContent.includes("thinking")) last.remove();
+        document.querySelector(".ura:last-child").remove();
+        append("ura", reply);
 
-        let reply = data.reply || "No reply (check server).";
-        reply = reply.replace(/\b(ura|URA|bot|assistant)\b/g, "URA");
-
-        append("bot", reply);
-
-        const btnWrap = document.createElement("div");
-        const readBtn = document.createElement("button");
-        const stopBtn = document.createElement("button");
-        readBtn.textContent = "🔊 Read Aloud";
-        stopBtn.textContent = "⏹ Stop";
-        readBtn.onclick = () => speak(reply);
-        stopBtn.onclick = () => speechSynthesis.cancel();
-        btnWrap.append(readBtn, stopBtn);
-        chat.appendChild(btnWrap);
-        chat.scrollTop = chat.scrollHeight;
-
-        if (voiceSpeak) speak(reply);
-
-      } catch (err) {
-        console.error(err);
-        append("bot", "Error contacting server.");
+        if (listening) speak(reply);
+      } catch (e) {
+        document.querySelector(".ura:last-child").innerText = "Error contacting server.";
       }
     }
 
-    send.addEventListener("click", () => {
-      const text = input.value.trim();
-      if (text) handleMessage(text, false);
+    sendBtn.addEventListener("click", () => sendMessage(input.value.trim()));
+    input.addEventListener("keydown", e => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage(input.value.trim());
+      }
     });
 
-    input.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) send.click();
-    });
+    // Dark/Light toggle
+    themeToggle.onclick = () => {
+      document.body.classList.toggle("dark");
+      themeToggle.textContent = document.body.classList.contains("dark") ? "☀️" : "🌙";
+    };
 
-    mic.addEventListener("click", () => {
+    // Mic button (voice input)
+    micBtn.onclick = () => {
       if (!('webkitSpeechRecognition' in window)) {
-        alert("Speech recognition not supported");
+        alert("Voice recognition not supported here.");
         return;
       }
-      recognition = new webkitSpeechRecognition();
-      recognition.lang = "en-GB";
+      if (!recognition) {
+        recognition = new webkitSpeechRecognition();
+        recognition.lang = "en-GB";
+        recognition.interimResults = false;
+        recognition.maxAlternatives = 1;
+
+        recognition.onresult = e => {
+          const text = e.results[0][0].transcript;
+          listening = true;
+          sendMessage(text);
+        };
+        recognition.onend = () => (listening = false);
+      }
+
       recognition.start();
-      recognition.onresult = (e) => {
-        const text = e.results[0][0].transcript;
-        handleMessage(text, true);
-      };
-    });
+    };
   </script>
 </body>
 </html>

@@ -44,6 +44,8 @@
       display: flex;
       flex-direction: column;
       gap: 10px;
+      max-width: 85%;
+      margin: auto;
     }
     .msg {
       max-width: 70%;
@@ -170,6 +172,7 @@
     function speak(text) {
       const utter = new SpeechSynthesisUtterance(text);
       utter.voice = currentVoice || voices[0];
+      speechSynthesis.cancel();
       speechSynthesis.speak(utter);
     }
 
@@ -178,35 +181,39 @@
       input.value = "";
       append("bot", "…thinking…");
 
-     const res = await fetch("/api/chat", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ message, userId: "fehman" })
-});
+      try {
+        const res = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: text, userId: "fehman" })
+        });
 
-      const data = await res.json();
+        const data = await res.json();
+        const last = chat.querySelector(".msg.bot:last-child");
+        if (last && last.textContent.includes("thinking")) last.remove();
 
-      const last = chat.querySelector(".msg.bot:last-child");
-      if (last && last.textContent.includes("thinking")) last.remove();
+        let reply = data.reply || "No reply (check server).";
+        reply = reply.replace(/\b(ura|URA|bot|assistant)\b/g, "URA");
 
-      // Ensure URA always refers to himself correctly
-      let reply = data.reply || "No reply (check server).";
-      reply = reply.replace(/\b(ura|URA|bot|assistant)\b/g, "URA");
+        append("bot", reply);
 
-      append("bot", reply);
+        const btnWrap = document.createElement("div");
+        const readBtn = document.createElement("button");
+        const stopBtn = document.createElement("button");
+        readBtn.textContent = "🔊 Read Aloud";
+        stopBtn.textContent = "⏹ Stop";
+        readBtn.onclick = () => speak(reply);
+        stopBtn.onclick = () => speechSynthesis.cancel();
+        btnWrap.append(readBtn, stopBtn);
+        chat.appendChild(btnWrap);
+        chat.scrollTop = chat.scrollHeight;
 
-      const btnWrap = document.createElement("div");
-      const readBtn = document.createElement("button");
-      const stopBtn = document.createElement("button");
-      readBtn.textContent = "🔊 Read Aloud";
-      stopBtn.textContent = "⏹ Stop";
-      readBtn.onclick = () => speak(reply);
-      stopBtn.onclick = () => speechSynthesis.cancel();
-      btnWrap.append(readBtn, stopBtn);
-      chat.appendChild(btnWrap);
-      chat.scrollTop = chat.scrollHeight;
+        if (voiceSpeak) speak(reply);
 
-      if (voiceSpeak) speak(reply);
+      } catch (err) {
+        console.error(err);
+        append("bot", "Error contacting server.");
+      }
     }
 
     send.addEventListener("click", () => {

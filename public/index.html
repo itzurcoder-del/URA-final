@@ -5,47 +5,63 @@
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>URA — Chat with memory</title>
 <style>
-  :root{
+  :root {
     --bg:#eef5f7; --panel:#fff; --muted:#6b7280; --accent:#06b6d4; --bot:#22c55e; --user:#0ea5e9;
     --radius:14px;
   }
   *{box-sizing:border-box}
   body{font-family:Inter,system-ui,Arial;margin:0;height:100vh;background:var(--bg);color:#111;display:flex;overflow:hidden}
+
   /* Sidebar */
-  #sidebar{width:280px;background:var(--panel);box-shadow:2px 0 18px rgba(12,12,12,0.06);padding:14px;display:flex;flex-direction:column;gap:12px}
+  #sidebar{
+    width:280px;background:var(--panel);box-shadow:2px 0 18px rgba(12,12,12,0.06);
+    padding:14px;display:flex;flex-direction:column;gap:12px;z-index:20;
+  }
   #brand{font-weight:700;font-size:16px}
   #chatsList{flex:1;overflow:auto;display:flex;flex-direction:column;gap:8px}
   .chat-item{padding:10px;border-radius:12px;cursor:pointer;color:#111;background:transparent}
   .chat-item.active{background:#edf7ff}
-  #newChat{padding:8px;border-radius:10px;border:1px dashed #e6eef6;background:transparent;cursor:pointer}
+  #newChat{padding:8px;border-radius:10px;border:1px dashed #e6eef6;background:transparent;cursor:pointer;width:100%}
   #sidebar .muted{color:var(--muted);font-size:13px}
   #controls-wrap{display:flex;gap:8px}
   #signinBtn,#signoutBtn{padding:8px 10px;border-radius:8px;border:none;background:var(--accent);color:#000;cursor:pointer}
   #signoutBtn{background:#ef4444;color:#fff}
+
   /* Main area */
-  #main{flex:1;display:flex;flex-direction:column}
-  header{height:64px;display:flex;align-items:center;justify-content:space-between;padding:0 18px;background:transparent}
+  #main{flex:1;display:flex;flex-direction:column;position:relative}
+  header{
+    height:64px;display:flex;align-items:center;justify-content:space-between;
+    padding:0 18px;background:transparent;z-index:10;
+  }
   header h1{margin:0;font-size:18px}
   #chat{flex:1;padding:18px;overflow:auto;display:flex;flex-direction:column;gap:12px}
-  .msg{max-width:72%;padding:12px 16px;border-radius:var(--radius);word-wrap:break-word;line-height:1.45;position:relative;box-shadow:0 6px 18px rgba(0,0,0,0.03)}
+  .msg{max-width:72%;padding:12px 16px;border-radius:var(--radius);word-wrap:break-word;line-height:1.45;
+       position:relative;box-shadow:0 6px 18px rgba(0,0,0,0.03)}
   .msg.user{align-self:flex-end;background:var(--user);color:#000;border-bottom-right-radius:6px}
   .msg.bot{align-self:flex-start;background:var(--bot);color:#fff;border-bottom-left-radius:6px}
-  .msg .meta{font-size:12px;color:rgba(0,0,0,0.4);margin-top:6px}
   .msg-controls{margin-top:8px;display:flex;gap:8px}
   .msg-controls button{padding:6px 8px;border-radius:8px;border:none;background:#fff;color:#111;cursor:pointer}
   .controls{display:flex;gap:10px;padding:12px;border-top:1px solid #e6eef6;align-items:center;background:transparent}
   textarea{flex:1;height:52px;padding:12px;border-radius:999px;border:1px solid #e6eef6;outline:none;resize:none}
   button.primary{background:var(--accent);color:#000;border:none;padding:10px 14px;border-radius:12px;cursor:pointer}
   button.icon{width:44px;height:44px;border-radius:50%;background:#fff;border:1px solid #e6eef6;cursor:pointer}
+
   select, #themeToggle{padding:6px 10px;border-radius:8px;border:none;background:var(--panel);color:var(--muted)}
-  /* modal */
-  #loginModal{position:fixed;left:0;top:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.36);z-index:999}
-  #loginCard{background:#fff;padding:20px;border-radius:12px;max-width:420px;width:92%;box-shadow:0 14px 50px rgba(0,0,0,0.18)}
-  /* responsive */
+
+  /* Mobile styles */
+  #menuBtn{
+    display:none;
+    background:none;border:none;font-size:24px;cursor:pointer;color:#111;
+  }
   @media(max-width:900px){
-    #sidebar{display:none}
-    .msg{max-width:92%}
+    #sidebar{
+      position:fixed;left:0;top:0;height:100%;transform:translateX(-100%);
+      transition:transform 0.25s ease;
+    }
+    #sidebar.open{transform:translateX(0)}
+    #menuBtn{display:inline-block}
     #chat{padding:12px}
+    .msg{max-width:92%}
   }
 </style>
 </head>
@@ -54,25 +70,22 @@
   <!-- Sidebar -->
   <div id="sidebar">
     <div id="brand">URA — Chats</div>
-
     <div style="display:flex;align-items:center;justify-content:space-between">
       <div class="muted">Chats</div>
       <button id="newChat" class="small">+ New</button>
     </div>
-
     <div id="chatsList"></div>
-
     <div id="controls-wrap">
-      <button id="signinBtn">Sign in with Google</button>
+      <button id="signinBtn">Sign in</button>
       <button id="signoutBtn" style="display:none">Sign out</button>
     </div>
-
     <div class="muted" style="font-size:13px">Signed in: <span id="userEmail">not signed</span></div>
   </div>
 
   <!-- Main -->
   <div id="main">
     <header>
+      <button id="menuBtn">☰</button>
       <h1>URA — Your assistant</h1>
       <div style="display:flex;align-items:center;gap:12px">
         <label class="muted">Voice:</label>
@@ -84,36 +97,18 @@
     <div id="chat"></div>
 
     <div class="controls">
-      <button id="micBtn" class="icon" title="Speak">🎤</button>
+      <button id="micBtn" class="icon">🎤</button>
       <textarea id="input" placeholder="Type your message... (Press Enter)"></textarea>
       <button id="send" class="primary">Send</button>
     </div>
   </div>
 
-  <!-- Login modal -->
-  <div id="loginModal" style="display:none">
-    <div id="loginCard">
-      <h3>Sign in to save your chats</h3>
-      <p class="muted">Sign in with Google to store chat history across devices. If you skip, memory will reset on refresh.</p>
-      <div style="display:flex;gap:8px;margin-top:14px">
-        <button id="modalSignIn" style="flex:1;background:var(--accent);border:none;padding:10px;border-radius:8px">Sign in with Google</button>
-        <button id="modalSkip" style="flex:1;background:#f3f4f6;border:none;padding:10px;border-radius:8px">Skip</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Firebase compat -->
+  <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
 
 <script>
-/* =========================
-   CONFIG — EDIT THESE:
-   - paste your Firebase config
-   - put your GROQ API key
-   - set MODEL to a supported model from Groq console
-*/
 const firebaseConfig = {
   apiKey: "AIzaSyAfbJJEw61oIaMKUIFMGVK062g376dSrXI",
   authDomain: "ura-ai-b1b20.firebaseapp.com",
@@ -122,351 +117,102 @@ const firebaseConfig = {
   messagingSenderId: "330104435643",
   appId: "1:330104435643:web:6f1d6f338a2e0de6cb0a9e"
 };
-
-const GROQ_API_KEY = "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";
-const MODEL = "llama-3.3-70b-versatile"; // choose a supported model from your Groq console
-/* ========================= */
-
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-// UI refs
-const chatsListEl = document.getElementById("chatsList");
+const GROQ_API_KEY = "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";
+const MODEL = "llama-3.3-70b-versatile";
+
+const sidebar = document.getElementById("sidebar");
+const menuBtn = document.getElementById("menuBtn");
+menuBtn.onclick = () => sidebar.classList.toggle("open");
+
 const chatEl = document.getElementById("chat");
 const inputEl = document.getElementById("input");
 const sendBtn = document.getElementById("send");
 const micBtn = document.getElementById("micBtn");
-const signInBtn = document.getElementById("signinBtn");
-const signOutBtn = document.getElementById("signoutBtn");
-const userEmailEl = document.getElementById("userEmail");
-const modal = document.getElementById("loginModal");
-const modalSignIn = document.getElementById("modalSignIn");
-const modalSkip = document.getElementById("modalSkip");
+const chatsListEl = document.getElementById("chatsList");
 const newChatBtn = document.getElementById("newChat");
 const voiceSelect = document.getElementById("voiceSelect");
-const themeToggle = document.getElementById("themeToggle");
 
-// state
-let user = null;
-let chats = []; // sidebar chat meta
-let activeChatId = null;
-let activeMessages = []; // array of { role: 'user'|'assistant', text, ts }
-let localMode = { chats: [] }; // when not signed in
+let activeMessages = [];
+let localChats = [{ id:0, title:"Welcome", messages:[{role:"assistant",text:"Hey, I'm URA! Let's chat."}]}];
+let activeChatId = 0;
 
-// load voices
-let voices = [];
-function loadVoices(){ voices = speechSynthesis.getVoices() || []; voiceSelect.innerHTML = voices.map((v,i)=>`<option value="${i}">${v.name}</option>`).join(''); }
-speechSynthesis.onvoiceschanged = loadVoices;
-setTimeout(loadVoices, 500);
-
-// helpers
-function formatHtml(t){ return t.replace(/\*\*(.*?)\*\*/g, "<b>$1</b>").replace(/\n/g,'<br>'); }
-function clearChat(){ chatEl.innerHTML = ''; }
-function scrollChat(){ chatEl.scrollTop = chatEl.scrollHeight - chatEl.clientHeight + 200; }
-
-// render messages
-function renderMessages(list){
-  clearChat();
-  list.forEach(m=>{
-    const d = document.createElement('div');
-    d.className = 'msg ' + (m.role==='user' ? 'user' : 'bot');
-    d.innerHTML = formatHtml(m.text);
-    if(m.role !== 'user'){
-      const controls = document.createElement('div'); controls.className='msg-controls';
-      const readBtn = document.createElement('button'); readBtn.textContent='🔊 Read'; readBtn.onclick = ()=> speak(m.text);
-      const stopBtn = document.createElement('button'); stopBtn.textContent='⏹ Stop'; stopBtn.onclick = ()=> speechSynthesis.cancel();
-      controls.append(readBtn, stopBtn);
-      d.appendChild(controls);
-    }
-    chatEl.appendChild(d);
+function scrollChat(){ chatEl.scrollTop = chatEl.scrollHeight; }
+function formatHtml(t){ return t.replace(/\*\*(.*?)\*\*/g,"<b>$1</b>").replace(/\n/g,"<br>"); }
+function renderMessages(msgs){
+  chatEl.innerHTML = "";
+  msgs.forEach(m=>{
+    const div = document.createElement("div");
+    div.className = "msg " + (m.role==="user"?"user":"bot");
+    div.innerHTML = formatHtml(m.text);
+    chatEl.appendChild(div);
   });
   scrollChat();
 }
 
-// render sidebar
-function renderSidebar(){
-  chatsListEl.innerHTML = '';
-  const list = user ? chats : localMode.chats;
-  list.forEach((c, idx) => {
-    const item = document.createElement('div');
-    item.className = 'chat-item' + (c.id === activeChatId ? ' active' : '');
-    item.textContent = c.title || 'Untitled';
-    item.onclick = ()=> openChat(c.id);
-    chatsListEl.appendChild(item);
-  });
-}
-
-// open chat (load messages)
-async function openChat(id){
-  activeChatId = id;
-  activeMessages = [];
-  renderSidebar();
-  if(user){
-    const doc = await db.collection('users').doc(user.uid).collection('chats').doc(id).get();
-    if(!doc.exists) { activeMessages = []; renderMessages(activeMessages); return; }
-    const data = doc.data();
-    activeMessages = data.messages || [];
-    renderMessages(activeMessages);
-  } else {
-    // local mode: id is index
-    const idx = id;
-    const record = localMode.chats[idx] || { messages: [] };
-    activeMessages = record.messages || [];
-    renderMessages(activeMessages);
-  }
-}
-
-// create new chat (returns id used)
-async function createNewChat(title='New chat'){
-  if(user){
-    const docRef = await db.collection('users').doc(user.uid).collection('chats').add({
-      title,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-      messages: []
-    });
-    chats.unshift({ id: docRef.id, title });
-    activeChatId = docRef.id;
-    activeMessages = [];
-    renderSidebar();
-    renderMessages(activeMessages);
-    return docRef.id;
-  } else {
-    localMode.chats.unshift({ id: localMode.chats.length, title, messages: [] });
-    activeChatId = 0;
-    activeMessages = [];
-    renderSidebar();
-    renderMessages(activeMessages);
-    return 0;
-  }
-}
-
-// save full messages array to firestore for active chat
-async function saveActiveMessagesToFirestore(){
-  if(!user) return;
-  const docRef = db.collection('users').doc(user.uid).collection('chats').doc(activeChatId);
-  await docRef.update({
-    messages: activeMessages,
-    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-  });
-  // update sidebar local copy
-  const found = chats.find(c=>c.id===activeChatId);
-  if(found) found.updatedAt = new Date();
-  renderSidebar();
-}
-
-// append a message and persist (user or assistant)
-async function pushMessage(role, text){
-  const msg = { role: role === 'user' ? 'user' : 'assistant', text, ts: Date.now() };
-  activeMessages.push(msg);
-  renderMessages(activeMessages);
-  if(user){
-    // replace full messages array (safer for updates)
-    await saveActiveMessagesToFirestore();
-  } else {
-    // local mode
-    localMode.chats[activeChatId].messages = activeMessages;
-    renderSidebar();
-  }
-  return msg;
-}
-
-// replace the last assistant "thinking" message (exact match) with reply
-async function replaceThinkingWithReply(reply){
-  // find last assistant '…thinking…'
-  for(let i = activeMessages.length - 1; i >= 0; i--){
-    if(activeMessages[i].role === 'assistant' && activeMessages[i].text === '…thinking…'){
-      activeMessages[i].text = reply;
-      break;
-    }
-  }
-  renderMessages(activeMessages);
-  if(user) await saveActiveMessagesToFirestore();
-  else localMode.chats[activeChatId].messages = activeMessages;
-}
-
-// generate chat title from first user msg + first assistant reply
-async function generateAndSaveTitleIfNeeded(firstUserText, firstBotText){
-  // create a short title: user first 30 chars + " — " + first 30 chars of bot
-  const userPart = firstUserText.trim().slice(0, 40);
-  const botPart = firstBotText.trim().slice(0, 40);
-  const title = `${userPart}${botPart ? ' — ' + botPart : ''}`.replace(/\n/g,' ').slice(0, 80);
-  if(user){
-    await db.collection('users').doc(user.uid).collection('chats').doc(activeChatId).update({ title, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
-    const meta = chats.find(c=>c.id===activeChatId);
-    if(meta) meta.title = title;
-    renderSidebar();
-  } else {
-    const meta = localMode.chats[activeChatId];
-    if(meta) meta.title = title;
-    renderSidebar();
-  }
-}
-
-// ask Groq API
 async function askGroq(prompt){
-  if(!GROQ_API_KEY || GROQ_API_KEY.includes('PASTE')) return "Groq key not set - set GROQ_API_KEY in the HTML.";
-  const endpoint = "https://api.groq.com/openai/v1/chat/completions";
-  const payload = {
-    model: MODEL,
-    messages: [
-      { role: "system", content: "You are URA, a helpful friendly assistant. Always refer to yourself as URA." },
-      ...activeMessages.map(m => ({ role: m.role === 'user' ? 'user' : 'assistant', content: m.text })),
-      { role: "user", content: prompt }
-    ],
-    max_tokens: 512,
-    temperature: 0.7
-  };
-
-  const res = await fetch(endpoint, {
-    method: "POST",
-    headers: { "Content-Type":"application/json", "Authorization": `Bearer ${GROQ_API_KEY}` },
-    body: JSON.stringify(payload)
+  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method:"POST",
+    headers:{
+      "Content-Type":"application/json",
+      "Authorization":`Bearer ${GROQ_API_KEY}`
+    },
+    body:JSON.stringify({
+      model:MODEL,
+      messages:[
+        {role:"system",content:"You are URA, a helpful AI assistant."},
+        ...activeMessages.map(m=>({role:m.role==="user"?"user":"assistant",content:m.text})),
+        {role:"user",content:prompt}
+      ]
+    })
   });
-
-  if(!res.ok){
-    const text = await res.text();
-    console.error("Groq API error:", text);
-    throw new Error("Groq API error");
-  }
   const data = await res.json();
-  const reply = data.choices?.[0]?.message?.content || data.choices?.[0]?.text || "No reply.";
-  return reply;
+  return data.choices?.[0]?.message?.content || "Error from Groq.";
 }
 
-// send flow: pushes user, pushes thinking placeholder, calls Groq, replaces placeholder, saves title once
-async function sendFlow(text, voiceSpeak=false){
-  if(activeChatId === null) await createNewChat('New chat');
-
-  // push user message
-  await pushMessage('user', text);
-
-  // if this is the first user message in an empty chat, set a flag to title later
-  const wasEmptyBefore = activeMessages.length === 1; // we just pushed user, so if length===1 it was empty before
-
-  // push thinking assistant placeholder
-  await pushMessage('assistant', '…thinking…');
-
+async function sendFlow(text){
+  activeMessages.push({role:"user",text});
+  renderMessages(activeMessages);
+  activeMessages.push({role:"assistant",text:"…thinking…"});
+  renderMessages(activeMessages);
   try{
     const reply = await askGroq(text);
-    // replace placeholder
-    await replaceThinkingWithReply(reply);
-
-    // If the chat was empty before (this was first exchange), generate a title
-    if(wasEmptyBefore){
-      // first user is activeMessages[0].text, first bot is reply
-      const firstUser = activeMessages[0]?.text || text;
-      const firstBot = reply;
-      await generateAndSaveTitleIfNeeded(firstUser, firstBot);
-    }
-
-    if(voiceSpeak) speak(reply);
-  }catch(err){
-    console.error(err);
-    // replace placeholder with error message
-    await replaceThinkingWithReply('Error contacting Groq API.');
-  }
+    activeMessages[activeMessages.length-1].text = reply;
+  }catch{ activeMessages[activeMessages.length-1].text="Network error."; }
+  renderMessages(activeMessages);
 }
 
-// TTS
-async function waitVoices(){ return new Promise(res=>{ let v = speechSynthesis.getVoices(); if(v.length) return res(v); speechSynthesis.onvoiceschanged = ()=> res(speechSynthesis.getVoices()); }); }
-async function speak(text){
-  const all = await waitVoices();
-  const idx = Number(voiceSelect.value || 0);
-  const voice = all[idx] || all.find(v=>v.lang && v.lang.includes('en-GB')) || all[0];
-  const u = new SpeechSynthesisUtterance(text.replace(/\*\*/g,''));
-  if(voice) u.voice = voice;
-  speechSynthesis.cancel();
-  speechSynthesis.speak(u);
-}
-
-// UI actions
-sendBtn.onclick = ()=> {
+sendBtn.onclick = ()=>{
   const t = inputEl.value.trim();
   if(!t) return;
-  inputEl.value = '';
-  sendFlow(t, false);
+  inputEl.value="";
+  sendFlow(t);
 };
-inputEl.addEventListener('keydown', e => { if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); sendBtn.click(); } });
+
+inputEl.addEventListener("keydown",e=>{
+  if(e.key==="Enter" && !e.shiftKey){
+    e.preventDefault();sendBtn.click();
+  }
+});
 
 let recognition;
-micBtn.onclick = async () => {
-  if(!('webkitSpeechRecognition' in window)){ alert('Speech recognition not supported'); return; }
+micBtn.onclick = ()=>{
+  if(!("webkitSpeechRecognition" in window)){ alert("Speech recognition not supported"); return; }
   if(!recognition){
     recognition = new webkitSpeechRecognition();
-    recognition.lang = 'en-GB';
-    recognition.interimResults = false;
-    recognition.onresult = e => {
-      const txt = e.results[0][0].transcript;
-      sendFlow(txt, true);
+    recognition.lang="en-GB";
+    recognition.onresult=e=>{
+      const t = e.results[0][0].transcript;
+      sendFlow(t);
     };
-    recognition.onstart = ()=> micBtn.textContent='🎙️';
-    recognition.onend = ()=> micBtn.textContent='🎤';
   }
   recognition.start();
 };
 
-newChatBtn.onclick = ()=> createNewChat('New chat');
-
-modalSignIn.onclick = ()=> signInWithGoogle();
-modalSkip.onclick = ()=> { modal.style.display='none'; };
-signInBtn.onclick = ()=> signInWithGoogle();
-signOutBtn.onclick = ()=> auth.signOut();
-
-async function signInWithGoogle(){
-  const provider = new firebase.auth.GoogleAuthProvider();
-  try{ await auth.signInWithPopup(provider); modal.style.display='none'; }
-  catch(e){ console.error('Signin error', e); alert('Sign in failed'); }
-}
-
-// Auth listener
-auth.onAuthStateChanged(async u => {
-  user = u;
-  if(user){
-    signInBtn.style.display='none';
-    signOutBtn.style.display='inline-block';
-    userEmailEl.textContent = user.email || user.displayName || user.uid;
-    modal.style.display = 'none';
-    // load chats
-    const snap = await db.collection('users').doc(user.uid).collection('chats').orderBy('updatedAt','desc').get();
-    chats = snap.docs.map(doc => ({ id: doc.id, title: doc.data().title || 'Chat', updatedAt: doc.data().updatedAt?.toDate?.() || new Date() }));
-    if(chats.length) activeChatId = chats[0].id;
-    renderSidebar();
-    if(activeChatId) openChat(activeChatId);
-  } else {
-    // guest
-    signInBtn.style.display='inline-block';
-    signOutBtn.style.display='none';
-    userEmailEl.textContent = 'not signed';
-    modal.style.display = 'flex';
-    // reset
-    localMode = { chats: [{ id:0, title:'Welcome', messages:[{ role:'assistant', text:"Hello — I'm URA. Sign in to save chats or skip to test." }] }] };
-    chats = [];
-    activeChatId = 0;
-    activeMessages = [];
-    renderSidebar();
-    openChat(activeChatId);
-  }
-});
-
-// initial bootstrap
-(async ()=>{
-  // show modal after slightly visible
-  setTimeout(()=>{ if(!auth.currentUser) modal.style.display='flex'; }, 600);
-
-  // make initial local chat so UI isn't empty
-  if(!user){
-    // localMode has welcome above; open it
-    renderSidebar();
-    openChat(0);
-  }
-
-  // populate voiceSelect after voices available
-  const all = await waitVoices();
-  voiceSelect.innerHTML = all.map((v,i)=>`<option value="${i}">${v.name} - ${v.lang}</option>`).join('');
-})();
-
+renderMessages(localChats[0].messages);
 </script>
 </body>
 </html>

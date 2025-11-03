@@ -462,6 +462,31 @@ auth.onAuthStateChanged(async u => {
     openChat(0);
   }
 
+  // Theme toggle fix
+let darkMode = false;
+themeToggle.addEventListener("click", () => {
+  darkMode = !darkMode;
+  if (darkMode) {
+    document.documentElement.style.setProperty("--bg", "#0f172a");
+    document.documentElement.style.setProperty("--panel", "#1e293b");
+    document.documentElement.style.setProperty("--muted", "#94a3b8");
+    document.documentElement.style.setProperty("--accent", "#06b6d4");
+    document.documentElement.style.setProperty("--bot", "#16a34a");
+    document.documentElement.style.setProperty("--user", "#38bdf8");
+    document.body.style.color = "#f1f5f9";
+    themeToggle.textContent = "☀️";
+  } else {
+    document.documentElement.style.setProperty("--bg", "#eef5f7");
+    document.documentElement.style.setProperty("--panel", "#fff");
+    document.documentElement.style.setProperty("--muted", "#6b7280");
+    document.documentElement.style.setProperty("--accent", "#06b6d4");
+    document.documentElement.style.setProperty("--bot", "#22c55e");
+    document.documentElement.style.setProperty("--user", "#0ea5e9");
+    document.body.style.color = "#111";
+    themeToggle.textContent = "🌙";
+  }
+});
+
   // populate voiceSelect after voices available
   const all = await waitVoices();
   voiceSelect.innerHTML = all.map((v,i)=>`<option value="${i}">${v.name} - ${v.lang}</option>`).join('');

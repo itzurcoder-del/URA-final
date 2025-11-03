@@ -6,99 +6,124 @@
 <title>URA — Chat with memory</title>
 <style>
   :root{
-    --bg:#f5f7fb; --panel:#fff; --muted:#6b7280; --accent:#06b6d4; --bot:#22c55e; --user:#0ea5e9;
+    --bg:#f4f7fb; --panel:#fff; --muted:#6b7280; --accent:#06b6d4; --bot:#22c55e; --user:#0ea5e9;
+    --radius:14px;
   }
-  body{font-family:Inter,system-ui,Arial; margin:0;height:100vh;background:#ecf0f3;color:#111; display:flex;}
-  /* sidebar */
-  #sidebar{width:260px;background:var(--panel);box-shadow:2px 0 12px rgba(12,12,12,0.06);padding:12px;display:flex;flex-direction:column;gap:8px}
-  #brand{font-weight:700;padding:6px 2px} 
-  #signinBtn, #signoutBtn{padding:8px;border-radius:8px;border:none;background:var(--accent);color:#000;cursor:pointer}
-  #chatsList{flex:1; overflow:auto; margin-top:6px; display:flex; flex-direction:column; gap:6px}
-  .chat-item{padding:10px;border-radius:10px;cursor:pointer;color:#111}
-  .chat-item.active{background:#eef8ff}
-  #newChat{padding:8px;border-radius:8px;border:1px dashed #ddd;background:transparent;cursor:pointer}
-  /* main */
+  *{box-sizing:border-box}
+  body{font-family:Inter,system-ui,Arial;margin:0;height:100vh;background:var(--bg);color:#111;display:flex;overflow:hidden}
+  /* Sidebar */
+  #sidebar{width:300px;background:var(--panel);box-shadow:2px 0 18px rgba(12,12,12,0.06);padding:14px;display:flex;flex-direction:column;gap:12px}
+  #brand{font-weight:700;font-size:16px}
+  #chatsList{flex:1;overflow:auto;display:flex;flex-direction:column;gap:8px}
+  .chat-item{padding:10px;border-radius:12px;cursor:pointer;color:#111;background:transparent;display:flex;justify-content:space-between;align-items:center}
+  .chat-item.active{background:#edf7ff}
+  .chat-item .meta{font-size:12px;color:var(--muted)}
+  #newChat{padding:8px;border-radius:10px;border:1px dashed #e6eef6;background:transparent;cursor:pointer}
+  #sidebar .muted{color:var(--muted);font-size:13px}
+  #controls-wrap{display:flex;gap:8px}
+  #signinBtn,#signoutBtn{padding:8px 10px;border-radius:8px;border:none;background:var(--accent);color:#000;cursor:pointer}
+  #signoutBtn{background:#ef4444;color:#fff}
+  #searchInput{width:100%;padding:8px;border-radius:8px;border:1px solid #eee}
+  /* Main area */
   #main{flex:1;display:flex;flex-direction:column}
   header{height:64px;display:flex;align-items:center;justify-content:space-between;padding:0 18px;background:transparent}
   header h1{margin:0;font-size:18px}
   #chat{flex:1;padding:18px;overflow:auto;display:flex;flex-direction:column;gap:12px}
-  .msg{max-width:72%;padding:10px 14px;border-radius:14px;word-wrap:break-word;line-height:1.4;position:relative}
-  .msg.bot{align-self:flex-start;background:var(--bot);color:#fff}
-  .msg.user{align-self:flex-end;background:var(--user);color:#000}
-  .controls{display:flex;gap:10px;padding:14px;border-top:1px solid #e6eef6;align-items:center;background:transparent}
-  textarea{flex:1;height:48px;padding:12px;border-radius:999px;border:1px solid #e6eef6;outline:none;resize:none}
-  button{background:var(--accent);border:none;padding:10px 12px;border-radius:12px;cursor:pointer}
-  .small{padding:6px 8px;border-radius:8px}
+  .msg{max-width:72%;padding:12px 16px;border-radius:var(--radius);word-wrap:break-word;line-height:1.45;position:relative;box-shadow:0 6px 18px rgba(0,0,0,0.03)}
+  .msg.user{align-self:flex-end;background:var(--user);color:#000;border-bottom-right-radius:8px}
+  .msg.bot{align-self:flex-start;background:var(--bot);color:#fff;border-bottom-left-radius:8px}
+  .msg .meta{font-size:12px;color:rgba(255,255,255,0.8);margin-top:8px}
   .msg-controls{margin-top:8px;display:flex;gap:8px}
+  .msg-controls button{padding:6px 8px;border-radius:8px;border:none;background:#fff;color:#111;cursor:pointer}
+  .controls{display:flex;gap:10px;padding:12px;border-top:1px solid #e6eef6;align-items:center;background:transparent}
+  textarea{flex:1;height:52px;padding:12px;border-radius:999px;border:1px solid #e6eef6;outline:none;resize:none}
+  button.primary{background:var(--accent);color:#000;border:none;padding:10px 14px;border-radius:12px;cursor:pointer}
+  button.icon{width:44px;height:44px;border-radius:50%;background:#fff;border:1px solid #e6eef6;cursor:pointer}
+  select, #themeToggle{padding:6px 10px;border-radius:8px;border:none;background:var(--panel);color:var(--muted)}
+  /* thinking animation */
+  .thinking {
+    display:inline-block;padding:8px 12px;border-radius:12px;background:rgba(255,255,255,0.14);color:#fff; margin-bottom:6px;
+  }
+  .dots span{display:inline-block;width:6px;height:6px;margin:0 3px;border-radius:50%;background:#fff;opacity:.35;transform:translateY(0);
+    animation: bounce 1s infinite;}
+  .dots span:nth-child(2){animation-delay:.15s}
+  .dots span:nth-child(3){animation-delay:.3s}
+  @keyframes bounce {50%{opacity:1;transform:translateY(-6px)}}
   /* modal */
-  #loginModal{position:fixed;left:0;top:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.35)}
-  #loginCard{background:#fff;padding:20px;border-radius:12px;max-width:420px;width:90%;box-shadow:0 10px 30px rgba(0,0,0,0.15)}
-  #loginCard h3{margin:0 0 10px 0}
-  /* tiny */
-  .muted{color:var(--muted);font-size:13px}
-  .title-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  #loginModal{position:fixed;left:0;top:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.36);z-index:999}
+  #loginCard{background:#fff;padding:20px;border-radius:12px;max-width:420px;width:92%;box-shadow:0 14px 50px rgba(0,0,0,0.18)}
   /* responsive */
-  @media(max-width:880px){ #sidebar{display:none} }
+  @media(max-width:900px){
+    #sidebar{display:none}
+    .msg{max-width:92%}
+    #chat{padding:12px}
+  }
 </style>
 </head>
 <body>
+
   <!-- Sidebar -->
   <div id="sidebar">
     <div id="brand">URA — Chats</div>
 
-    <div class="title-row">
-      <div class="muted">Chats</div>
-      <button id="newChat" class="small">+ New</button>
+    <div style="display:flex;align-items:center;gap:8px">
+      <input id="searchInput" placeholder="Search chats..." />
+      <button id="newChat">+ New</button>
     </div>
 
     <div id="chatsList"></div>
 
-    <div style="display:flex;gap:8px;margin-top:8px">
+    <div id="controls-wrap">
       <button id="signinBtn">Sign in with Google</button>
-      <button id="signoutBtn" style="display:none;background:#ef4444;color:#fff">Sign out</button>
+      <button id="signoutBtn" style="display:none">Sign out</button>
     </div>
 
-    <div class="muted" style="font-size:12px;margin-top:10px">Signed in: <span id="userEmail">not signed</span></div>
+    <div class="muted" style="font-size:13px">Signed in: <span id="userEmail">not signed</span></div>
   </div>
 
   <!-- Main -->
   <div id="main">
     <header>
       <h1>URA — Your assistant</h1>
-      <div class="muted">Voice: <select id="voiceSelect" style="margin-left:8px"></select></div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <label class="muted">Voice:</label>
+        <select id="voiceSelect"></select>
+        <button id="themeToggle">🌙</button>
+      </div>
     </header>
 
     <div id="chat"></div>
 
     <div class="controls">
-      <button id="micBtn" title="Speak">🎤</button>
+      <button id="micBtn" class="icon" title="Speak">🎤</button>
       <textarea id="input" placeholder="Type your message... (Press Enter)"></textarea>
-      <button id="sendBtn">Send</button>
+      <button id="send" class="primary">Send</button>
     </div>
   </div>
 
-  <!-- Login modal (optional) -->
+  <!-- Login modal -->
   <div id="loginModal" style="display:none">
     <div id="loginCard">
       <h3>Sign in to save your chats</h3>
       <p class="muted">Sign in with Google to store chat history across devices. If you skip, memory will reset on refresh.</p>
       <div style="display:flex;gap:8px;margin-top:14px">
-        <button id="modalSignIn" style="flex:1;background:#06b6d4">Sign in with Google</button>
-        <button id="modalSkip" style="flex:1;background:#e6eef6;color:#000">Skip</button>
+        <button id="modalSignIn" style="flex:1;background:var(--accent);border:none;padding:10px;border-radius:8px">Sign in with Google</button>
+        <button id="modalSkip" style="flex:1;background:#f3f4f6;border:none;padding:10px;border-radius:8px">Skip</button>
       </div>
     </div>
   </div>
 
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+  <!-- Firebase compat -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
 
 <script>
 /* =========================
-   CONFIG — EDIT THESE
-   =========================
-   1) Put your Firebase config below (go to Firebase console -> project -> web setup)
-   2) Put your GROQ API key below (or change to call your server endpoint)
+   CONFIG — edit these:
+   - set firebaseConfig with your Firebase web config
+   - no GROQ key here (serverless holds it)
+   - set MODEL name in Vercel env if needed
 */
 const firebaseConfig = {
   apiKey: "AIzaSyAfbJJEw61oIaMKUIFMGVK062g376dSrXI",
@@ -108,14 +133,8 @@ const firebaseConfig = {
   messagingSenderId: "330104435643",
   appId: "1:330104435643:web:6f1d6f338a2e0de6cb0a9e"
 };
+// end config
 
-const GROQ_API_KEY = "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"; // replace with your Groq key if calling Groq directly
-
-/* =========================
-   End config
-   ========================= */
-
-// init firebase
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
@@ -124,7 +143,7 @@ const db = firebase.firestore();
 const chatsListEl = document.getElementById("chatsList");
 const chatEl = document.getElementById("chat");
 const inputEl = document.getElementById("input");
-const sendBtn = document.getElementById("sendBtn");
+const sendBtn = document.getElementById("send");
 const micBtn = document.getElementById("micBtn");
 const signInBtn = document.getElementById("signinBtn");
 const signOutBtn = document.getElementById("signoutBtn");
@@ -134,304 +153,321 @@ const modalSignIn = document.getElementById("modalSignIn");
 const modalSkip = document.getElementById("modalSkip");
 const newChatBtn = document.getElementById("newChat");
 const voiceSelect = document.getElementById("voiceSelect");
+const searchInput = document.getElementById("searchInput");
+const themeToggle = document.getElementById("themeToggle");
 
-// app state
-let user = null;               // firebase user
-let chats = [];                // list of chat meta for sidebar: { id, title, updatedAt }
-let activeChatId = null;       // selected chat doc id
-let activeMessages = [];       // messages for active chat {role, text, ts}
-let localModeTemp = { chats: [] }; // temporary memory when not signed in
+// state
+let user = null;
+let chats = []; // sidebar meta {id, title, updatedAt}
+let activeChatId = null;
+let activeMessages = []; // messages [{role,text,ts}]
+let localMode = { chats: [] };
 
-// speech / voices
+// voices
 let voices = [];
-function loadVoices(){ voices = speechSynthesis.getVoices() || []; voiceSelect.innerHTML = voices.map((v,i)=>`<option value="${i}">${v.name}</option>`).join(''); }
+function loadVoices(){ voices = speechSynthesis.getVoices() || []; voiceSelect.innerHTML = voices.map((v,i)=>`<option value="${i}">${v.name} - ${v.lang}</option>`).join(''); }
 speechSynthesis.onvoiceschanged = loadVoices;
-loadVoices();
+setTimeout(loadVoices,500);
 
-// utility: format bold **text**
-function formatTextHtml(t){ return t.replace(/\*\*(.*?)\*\*/g, "<b>$1</b>").replace(/\n/g,'<br>'); }
+// helpers
+function formatHtml(t){ return t.replace(/\*\*(.*?)\*\*/g, "<b>$1</b>").replace(/\n/g,'<br>'); }
+function formatTime(ts){
+  const d = new Date(ts);
+  return d.toLocaleString(undefined,{hour:'2-digit',minute:'2-digit',month:'short',day:'numeric'});
+}
+function clearChat(){ chatEl.innerHTML = ''; }
+function scrollChat(){ chatEl.scrollTop = chatEl.scrollHeight - chatEl.clientHeight + 200; }
 
-// UI helpers
-function clearChatUI(){ chatEl.innerHTML = ''; }
+// render messages
 function renderMessages(list){
-  clearChatUI();
+  clearChat();
   list.forEach(m=>{
     const d = document.createElement('div');
-    d.className='msg '+(m.role==='user'?'user':'bot');
-    d.innerHTML = formatTextHtml(m.text);
-    // if bot add controls
-    if(m.role === 'assistant' || m.role === 'bot'){
+    d.className = 'msg ' + (m.role==='user' ? 'user' : 'bot');
+    d.innerHTML = formatHtml(m.text);
+    const meta = document.createElement('div'); meta.className='meta';
+    meta.textContent = formatTime(m.ts || Date.now());
+    d.appendChild(meta);
+
+    if(m.role !== 'user'){
       const controls = document.createElement('div'); controls.className='msg-controls';
-      const read = document.createElement('button'); read.className='small'; read.textContent='🔊 Read'; read.onclick=()=> speak(m.text);
-      const stop = document.createElement('button'); stop.className='small'; stop.textContent='⏹ Stop'; stop.onclick=()=> speechSynthesis.cancel();
-      controls.append(read, stop);
+      const readBtn = document.createElement('button'); readBtn.textContent='🔊 Read'; readBtn.onclick = ()=> speak(m.text);
+      const stopBtn = document.createElement('button'); stopBtn.textContent='⏹ Stop'; stopBtn.onclick = ()=> speechSynthesis.cancel();
+      controls.append(readBtn, stopBtn);
       d.appendChild(controls);
     }
+
     chatEl.appendChild(d);
   });
-  chatEl.scrollTop = chatEl.scrollHeight;
+  scrollChat();
 }
 
-// sidebar render
-function renderSidebar(){
-  chatsListEl.innerHTML='';
-  const list = user ? chats : localModeTemp.chats;
-  list.forEach(c=>{
+// render sidebar with search
+function renderSidebar(filter = ''){
+  chatsListEl.innerHTML = '';
+  const list = user ? chats : localMode.chats;
+  const filtered = list.filter(c => c.title && c.title.toLowerCase().includes(filter.toLowerCase()));
+  filtered.forEach((c, idx) => {
     const item = document.createElement('div');
-    item.className='chat-item';
-    if(c.id === activeChatId) item.classList.add('active');
-    item.textContent = c.title || 'Untitled';
+    item.className = 'chat-item' + (c.id === activeChatId ? ' active' : '');
+    const left = document.createElement('div');
+    left.style.display='flex'; left.style.flexDirection='column';
+    const title = document.createElement('div'); title.textContent = c.title || 'Untitled';
+    const meta = document.createElement('div'); meta.className='meta'; meta.textContent = c.updatedAt ? new Date(c.updatedAt).toLocaleString() : '';
+    left.append(title, meta);
+
+    const right = document.createElement('div');
+    const rename = document.createElement('button'); rename.textContent='✏️'; rename.title='Rename'; rename.onclick = (e)=>{ e.stopPropagation(); renameChat(c.id); };
+    const del = document.createElement('button'); del.textContent='🗑️'; del.title='Delete'; del.onclick = (e)=>{ e.stopPropagation(); deleteChat(c.id); };
+    right.append(rename, del);
+
+    item.append(left, right);
     item.onclick = ()=> openChat(c.id);
     chatsListEl.appendChild(item);
   });
 }
 
-// open chat by id (if local mode, id is index)
+// open chat
 async function openChat(id){
   activeChatId = id;
   activeMessages = [];
-  renderSidebar();
+  renderSidebar(searchInput.value || '');
   if(user){
-    // fetch from Firestore
     const doc = await db.collection('users').doc(user.uid).collection('chats').doc(id).get();
-    if(!doc.exists) return;
-    const data = doc.data();
-    activeMessages = data.messages || [];
+    if(!doc.exists){ activeMessages=[]; renderMessages(activeMessages); return; }
+    activeMessages = doc.data().messages || [];
     renderMessages(activeMessages);
   } else {
     const idx = id;
-    activeMessages = localModeTemp.chats[idx]?.messages || [];
+    const record = localMode.chats[idx] || { messages: [] };
+    activeMessages = record.messages || [];
     renderMessages(activeMessages);
   }
 }
 
 // create new chat
-async function createNewChat(title = 'New chat'){
+async function createNewChat(title='New chat'){
   if(user){
     const docRef = await db.collection('users').doc(user.uid).collection('chats').add({
-      title,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-      messages: []
+      title, createdAt: firebase.firestore.FieldValue.serverTimestamp(), updatedAt: firebase.firestore.FieldValue.serverTimestamp(), messages: []
     });
     chats.unshift({ id: docRef.id, title });
     activeChatId = docRef.id;
     activeMessages = [];
-    renderSidebar();
+    renderSidebar(searchInput.value || '');
     renderMessages(activeMessages);
+    return docRef.id;
   } else {
-    // local mode: push to temp array
-    const idx = localModeTemp.chats.unshift({ title, messages: [] }) - 1;
+    localMode.chats.unshift({ id: localMode.chats.length, title, messages: [] });
     activeChatId = 0;
     activeMessages = [];
-    renderSidebar();
+    renderSidebar(searchInput.value || '');
     renderMessages(activeMessages);
+    return 0;
   }
 }
 
-// append message to active chat and save
-async function appendMessageToActive(role, text){
+// delete chat
+async function deleteChat(id){
+  if(!confirm('Delete this chat?')) return;
+  if(user){
+    await db.collection('users').doc(user.uid).collection('chats').doc(id).delete();
+    chats = chats.filter(c=>c.id!==id);
+  } else {
+    localMode.chats.splice(id,1);
+  }
+  activeChatId = null;
+  activeMessages = [];
+  renderSidebar(searchInput.value || '');
+  clearChat();
+}
+
+// rename chat
+async function renameChat(id){
+  const newTitle = prompt('Enter new chat title:');
+  if(!newTitle) return;
+  if(user){
+    await db.collection('users').doc(user.uid).collection('chats').doc(id).update({ title: newTitle, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+    const meta = chats.find(c=>c.id===id); if(meta) meta.title = newTitle;
+  } else {
+    const idx = id;
+    if(localMode.chats[idx]) localMode.chats[idx].title = newTitle;
+  }
+  renderSidebar(searchInput.value || '');
+}
+
+// save messages for active chat
+async function saveActiveMessages(){
+  if(!user) return;
+  await db.collection('users').doc(user.uid).collection('chats').doc(activeChatId).update({
+    messages: activeMessages,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+  const meta = chats.find(c=>c.id===activeChatId); if(meta) meta.updatedAt = new Date();
+  renderSidebar(searchInput.value || '');
+}
+
+// push message
+async function pushMessage(role, text){
   const msg = { role: role === 'user' ? 'user' : 'assistant', text, ts: Date.now() };
   activeMessages.push(msg);
   renderMessages(activeMessages);
-
   if(user){
-    // update Firestore doc
-    const docRef = db.collection('users').doc(user.uid).collection('chats').doc(activeChatId);
-    await docRef.update({
-      messages: firebase.firestore.FieldValue.arrayUnion(msg),
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
-    // update sidebar local copy
-    const found = chats.find(c=>c.id===activeChatId);
-    if(found) found.updatedAt = new Date();
-    renderSidebar();
+    await saveActiveMessages();
   } else {
-    // local temp
-    if(!localModeTemp.chats[activeChatId]) localModeTemp.chats[activeChatId] = { title:'New chat', messages:[] };
-    localModeTemp.chats[activeChatId].messages = activeMessages;
-    renderSidebar();
+    localMode.chats[activeChatId].messages = activeMessages;
+    renderSidebar(searchInput.value || '');
   }
+  return msg;
 }
 
-// ask Groq (client-side). If you'd rather hide key use /api/chat server route and remove GROQ_API_KEY here.
-async function askGroq(prompt){
-  if(!GROQ_API_KEY || GROQ_API_KEY === "YOUR_GROQ_API_KEY"){
-    return "Groq API key not set. Replace GROQ_API_KEY in the HTML with your key or set up a server endpoint.";
+// replace thinking placeholder
+async function replaceThinkingReply(reply){
+  for(let i=activeMessages.length-1;i>=0;i--){
+    if(activeMessages[i].role==='assistant' && activeMessages[i].text==='…thinking…'){
+      activeMessages[i].text = reply; break;
+    }
   }
+  renderMessages(activeMessages);
+  if(user) await saveActiveMessages();
+  else localMode.chats[activeChatId].messages=activeMessages;
+}
 
-  const endpoint = "https://api.groq.com/openai/v1/chat/completions";
-  const payload = {
-    model: "llama-3.3-70b-versatile", // <-- pick a supported model in your Groq console; update if needed
-    messages: [
-      { role: "system", content: "You are URA, a helpful assistant. Always call yourself URA and be polite." },
-      ...activeMessages.map(m => ({ role: m.role === 'user' ? 'user' : 'assistant', content: m.text })),
-      { role: "user", content: prompt }
-    ],
-    max_tokens: 512,
-    temperature: 0.7
+// generate title (first user + first bot)
+async function generateTitleIfNeeded(){
+  if(!activeMessages || activeMessages.length < 2) return;
+  // We want title from first user and first assistant
+  const firstUser = activeMessages.find(m=>m.role==='user')?.text || '';
+  const firstBot = activeMessages.find(m=>m.role==='assistant' && m.text!=='…thinking…')?.text || '';
+  if(!firstUser) return;
+  const title = (firstUser.trim().slice(0,40) + (firstBot? ' — ' + firstBot.trim().slice(0,40):'')).slice(0,80);
+  if(user){
+    await db.collection('users').doc(user.uid).collection('chats').doc(activeChatId).update({ title, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+    const meta = chats.find(c=>c.id===activeChatId); if(meta) meta.title = title;
+  } else {
+    if(localMode.chats[activeChatId]) localMode.chats[activeChatId].title = title;
+  }
+  renderSidebar(searchInput.value || '');
+}
+
+// serverless proxy call (hides Groq key)
+async function callApiChat(message){
+  const body = {
+    message,
+    history: activeMessages.map(m => ({ role: m.role, text: m.text }))
   };
-
-  const res = await fetch(endpoint, {
-    method: "POST",
-    headers: {
-      "Content-Type":"application/json",
-      "Authorization": `Bearer ${GROQ_API_KEY}`
-    },
-    body: JSON.stringify(payload)
+  const res = await fetch('/api/chat', {
+    method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify(body)
   });
-
   if(!res.ok){
-    const errText = await res.text();
-    console.error("Groq API error:", errText);
-    throw new Error("Groq API error");
+    const text = await res.text().catch(()=>"");
+    throw new Error(text || 'API error');
   }
   const data = await res.json();
-  // adapt depending on response shape
-  const reply = data.choices?.[0]?.message?.content || data.choices?.[0]?.text || "No reply.";
-  return reply;
+  return data.reply;
 }
 
-/* ========== Main chat flow ========== */
-async function sendChatText(text, speakIfVoice = false){
-  // ensure an active chat exists
-  if(activeChatId === null){
-    await createNewChat("Chat");
-  }
-  // user message locally and saved
-  await appendMessageToActive('user', text);
-
-  // show thinking placeholder
-  await appendMessageToActive('assistant', '…thinking…');
-
+// send flow
+async function sendFlow(text, voiceSpeak=false){
+  if(activeChatId === null) await createNewChat('New chat');
+  // push user
+  await pushMessage('user', text);
+  // push thinking placeholder
+  await pushMessage('assistant','…thinking…');
   try{
-    const reply = await askGroq(text);
-    // remove last thinking entry (it was assistant)
-    activeMessages = activeMessages.filter(m => m.text !== '…thinking…' || m.role !== 'assistant');
-    // append assistant actual reply
-    await appendMessageToActive('assistant', reply);
-    if(speakIfVoice) speak(reply);
+    const reply = await callApiChat(text);
+    await replaceThinkingReply(reply);
+    // if first exchange (we can detect by messages count); generate title
+    await generateTitleIfNeeded();
+    if(voiceSpeak) speak(reply);
   }catch(err){
     console.error(err);
-    // replace thinking with error
-    activeMessages = activeMessages.filter(m => m.text !== '…thinking…' || m.role !== 'assistant');
-    await appendMessageToActive('assistant', 'Error contacting Groq API.');
+    await replaceThinkingReply('Error contacting chat API.');
   }
 }
 
-// voice speak helper
-async function waitForVoices(){
-  return new Promise(resolve=>{
-    let v = speechSynthesis.getVoices();
-    if(v && v.length) return resolve(v);
-    speechSynthesis.onvoiceschanged = ()=> resolve(speechSynthesis.getVoices());
-  });
-}
+// TTS
+async function waitVoices(){ return new Promise(res=>{ let v = speechSynthesis.getVoices(); if(v.length) return res(v); speechSynthesis.onvoiceschanged = ()=> res(speechSynthesis.getVoices()); }); }
 async function speak(text){
-  const all = await waitForVoices();
-  const v = all[voiceSelect.value] || all.find(x=>x.lang && x.lang.includes('en-GB')) || all[0];
+  const all = await waitVoices();
+  const idx = Number(voiceSelect.value || 0);
+  const voice = all[idx] || all.find(v=>v.lang && v.lang.includes('en-GB')) || all[0];
   const u = new SpeechSynthesisUtterance(text.replace(/\*\*/g,''));
-  if(v) u.voice = v;
+  if(voice) u.voice = voice;
   speechSynthesis.cancel();
   speechSynthesis.speak(u);
 }
 
-/* ========== UI events ========== */
-sendBtn.onclick = ()=> {
-  const t = inputEl.value.trim();
-  if(!t) return;
-  inputEl.value = '';
-  sendChatText(t, false);
-};
-inputEl.addEventListener('keydown', e => {
-  if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); sendBtn.click(); }
-});
+// UI events
+sendBtn.onclick = ()=> { const t = inputEl.value.trim(); if(!t) return; inputEl.value=''; sendFlow(t,false); };
+inputEl.addEventListener('keydown', e=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); sendBtn.click(); }});
 
 // mic
 let recognition;
-micBtn.onclick = async () => {
-  if(!('webkitSpeechRecognition' in window)){
-    alert('Speech recognition not supported in this browser.');
-    return;
-  }
+micBtn.onclick = async ()=>{
+  if(!('webkitSpeechRecognition' in window)){ alert('Speech recognition not supported'); return; }
   if(!recognition){
     recognition = new webkitSpeechRecognition();
     recognition.lang = 'en-GB';
     recognition.interimResults = false;
-    recognition.onresult = e => {
-      const txt = e.results[0][0].transcript;
-      sendChatText(txt, true);
-    };
-    recognition.onstart = ()=> micBtn.textContent = '🎙️';
-    recognition.onend = ()=> micBtn.textContent = '🎤';
+    recognition.onresult = e => { const t = e.results[0][0].transcript; sendFlow(t,true); };
+    recognition.onstart = ()=> micBtn.textContent='🎙️';
+    recognition.onend = ()=> micBtn.textContent='🎤';
   }
   recognition.start();
 };
 
-// create new chat
 newChatBtn.onclick = ()=> createNewChat('New chat');
-
-// modal actions
 modalSignIn.onclick = ()=> signInWithGoogle();
 modalSkip.onclick = ()=> { modal.style.display='none'; };
-
-// sign-in
-async function signInWithGoogle(){
-  const provider = new firebase.auth.GoogleAuthProvider();
-  try{
-    const result = await auth.signInWithPopup(provider);
-    // user will be set by onAuthStateChanged listener
-    modal.style.display='none';
-  }catch(err){
-    console.error("Signin error", err);
-    alert("Sign in failed: " + err.message);
-  }
-}
-
-signInBtn.onclick = signInWithGoogle;
+signInBtn.onclick = ()=> signInWithGoogle();
 signOutBtn.onclick = ()=> auth.signOut();
 
-/* ========== Auth listener ========= */
-auth.onAuthStateChanged(async u => {
+async function signInWithGoogle(){
+  const provider = new firebase.auth.GoogleAuthProvider();
+  try{ await auth.signInWithPopup(provider); modal.style.display='none'; }
+  catch(e){ console.error('signin',e); alert('Sign in failed'); }
+}
+
+// auth listener
+auth.onAuthStateChanged(async u=>{
   user = u;
   if(user){
-    // show sign out
-    signInBtn.style.display='none';
-    signOutBtn.style.display='inline-block';
+    signInBtn.style.display='none'; signOutBtn.style.display='inline-block';
     userEmailEl.textContent = user.email || user.displayName || user.uid;
-    modal.style.display = 'none';
-    // load chats from firestore
+    modal.style.display='none';
     const snap = await db.collection('users').doc(user.uid).collection('chats').orderBy('updatedAt','desc').get();
-    chats = snap.docs.map(doc => ({ id: doc.id, title: (doc.data().title||'Chat'), updatedAt: doc.data().updatedAt?.toDate?.() || new Date() }));
-    // open latest if exists
+    chats = snap.docs.map(doc => ({ id: doc.id, title: doc.data().title||'Chat', updatedAt: doc.data().updatedAt?.toDate?.() || new Date() }));
     if(chats.length) activeChatId = chats[0].id;
-    renderSidebar();
+    renderSidebar(searchInput.value || '');
     if(activeChatId) openChat(activeChatId);
   } else {
-    // not signed in
-    signInBtn.style.display='inline-block';
-    signOutBtn.style.display='none';
+    signInBtn.style.display='inline-block'; signOutBtn.style.display='none';
     userEmailEl.textContent = 'not signed';
-    // show modal to prompt sign-in
     modal.style.display = 'flex';
-    // reset chats to empty local mode
-    localModeTemp = { chats: [] };
+    // setup local sample chat
+    localMode = { chats:[ { id:0, title:'Welcome', messages:[ { role:'assistant', text:"Hello — I'm URA. Sign in to save chats, or skip to try temporary chat.", ts: Date.now() } ] } ] };
     chats = [];
-    activeChatId = null;
-    activeMessages = [];
-    renderSidebar();
-    clearChatUI();
+    activeChatId = 0; activeMessages = [];
+    renderSidebar(searchInput.value || '');
+    openChat(activeChatId);
   }
 });
 
-/* ========== initial stubs ========== */
-// make a quick starter chat in local mode
-localModeTemp.chats.push({ title: 'Welcome', messages: [{ role:'assistant', text: 'Hello — I am URA. Sign in to save chats, or skip to try temporary chat.' }] });
-activeChatId = 0;
-openChat(activeChatId);
+// search
+searchInput.addEventListener('input', ()=> renderSidebar(searchInput.value || ''));
 
-// load voices into dropdown when available
-setTimeout(()=>loadVoices(), 500);
+// theme toggle
+themeToggle.onclick = ()=> { document.body.classList.toggle('dark'); themeToggle.textContent = document.body.classList.contains('dark')? '☀️':'🌙'; };
+
+// bootstrap
+(async ()=>{
+  setTimeout(()=>{ if(!auth.currentUser) modal.style.display='flex'; },600);
+  renderSidebar();
+  openChat(0);
+  const all = await waitVoices();
+  voiceSelect.innerHTML = all.map((v,i)=>`<option value="${i}">${v.name} - ${v.lang}</option>`).join('');
+})();
 </script>
 </body>
 </html>

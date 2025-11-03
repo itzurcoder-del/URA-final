@@ -9,6 +9,12 @@
     --bg:#eef5f7; --panel:#fff; --muted:#6b7280; --accent:#06b6d4; --bot:#22c55e; --user:#0ea5e9;
     --radius:14px;
   }
+
+  /* Smooth transition for theme switching */
+*{
+  box-sizing:border-box;
+  transition:background-color 0.4s ease, color 0.4s ease, border-color 0.4s ease;
+}
   *{box-sizing:border-box}
   body{font-family:Inter,system-ui,Arial;margin:0;height:100vh;background:var(--bg);color:#111;display:flex;overflow:hidden}
   /* Sidebar */
